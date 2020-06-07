@@ -5,6 +5,7 @@ import com.github.pagehelper.PageInfo;
 import com.usian.mapper.TbContentMapper;
 import com.usian.pojo.TbContent;
 import com.usian.pojo.TbContentExample;
+import com.usian.redis.RedisClient;
 import com.usian.utils.AdNode;
 import com.usian.utils.PageResult;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,12 @@ public class ContentServiceImpl implements ContentService{
     @Autowired
     private TbContentMapper tbContentMapper;
 
+    @Autowired
+    private RedisClient redisClient;
+
+    @Value("${PORTAL_AD_KEY}")
+    private String PORTAL_AD_KEY;
+
     /**
      * 根据分类查询内容
      */
@@ -62,16 +69,25 @@ public class ContentServiceImpl implements ContentService{
         Date date = new Date();
         tbContent.setCreated(date);
         tbContent.setUpdated(date);
+        //缓存同步
+        redisClient.hset(PORTAL_AD_KEY,AD_CATEGORY_ID.toString(),tbContent);
         return tbContentMapper.insertSelective(tbContent);
     }
 
     @Override
     public Integer deleteContentByIds(Long ids) {
-        return tbContentMapper.deleteByPrimaryKey(ids);
+        Integer num = tbContentMapper.deleteByPrimaryKey(ids);
+        //缓存同步
+        redisClient.hdel(PORTAL_AD_KEY,AD_CATEGORY_ID.toString());
+        return num;
     }
 
     @Override
     public List<AdNode> selectFrontendContentByAD() {
+        List<AdNode> adNodeListRedis = (List<AdNode>) redisClient.hget(PORTAL_AD_KEY, AD_CATEGORY_ID.toString());
+        if (adNodeListRedis!=null){
+            return adNodeListRedis;
+        }
         TbContentExample tbContentExample = new TbContentExample();
         TbContentExample.Criteria criteria = tbContentExample.createCriteria();
         criteria.andCategoryIdEqualTo(AD_CATEGORY_ID);
@@ -89,6 +105,7 @@ public class ContentServiceImpl implements ContentService{
             adNode.setWidthB(AD_WIDTHB);
             adNodeList.add(adNode);
         }
+        redisClient.hset(PORTAL_AD_KEY,AD_CATEGORY_ID.toString(),adNodeList);
         return adNodeList;
     }
 }
