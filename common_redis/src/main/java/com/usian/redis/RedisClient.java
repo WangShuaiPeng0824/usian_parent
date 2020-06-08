@@ -2,6 +2,7 @@ package com.usian.redis;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.TimeoutUtils;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -258,6 +259,22 @@ public class RedisClient {
         } catch (Exception e) {
             e.printStackTrace();
             return 0;
+        }
+    }
+
+    /**
+     * 分布式锁
+     * @param key
+     * @param value
+     * @param time
+     * @return
+     */
+    public boolean setnx(String key,Object value,Long time){
+        try {
+            return redisTemplate.opsForValue().setIfAbsent(key,value,time, TimeUnit.SECONDS);
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
         }
     }
 
