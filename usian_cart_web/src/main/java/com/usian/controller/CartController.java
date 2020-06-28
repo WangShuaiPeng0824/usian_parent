@@ -134,6 +134,12 @@ public class CartController {
         return new HashMap<String, TbItem>();
     }
 
+    /**
+     * 查询购物车
+     * @param userId
+     * @param request
+     * @return
+     */
     @RequestMapping("/showCart")
     public Result showCart(String userId,HttpServletRequest request){
         try {
@@ -150,6 +156,12 @@ public class CartController {
 
             }else{
                 //已登录
+                Map<String, TbItem> cart = getCartFormRedis(userId);
+                Set<String> key = cart.keySet();
+                for (String itemId : key){
+                    TbItem tbItem = cart.get(itemId);
+                    tbItemList.add(tbItem);
+                }
             }
             return Result.ok(tbItemList);
         }catch (Exception e){
@@ -158,6 +170,15 @@ public class CartController {
         }
     }
 
+    /**
+     * 修改购物车中的商品
+     * @param userId
+     * @param itemId
+     * @param num
+     * @param request
+     * @param response
+     * @return
+     */
     @RequestMapping("/updateItemNum")
     public Result updateItemNum(String userId,Long itemId,Integer num,HttpServletRequest request,HttpServletResponse response){
         try {
@@ -173,6 +194,14 @@ public class CartController {
                 addClientCookie(cart,request,response);
             }else{
                 //已登录
+                //1、获得redis中的购物车
+                Map<String, TbItem> cart = getCartFormRedis(userId);
+                //2、修改购物车中的商品
+                TbItem tbItem = cart.get(itemId.toString());
+                tbItem.setNum(num);
+                cart.put(itemId.toString(),tbItem);
+                //3、把购物车写到redis中
+                addCartToRedis(cart,userId);
             }
             return Result.ok();
         }catch (Exception e){
@@ -181,6 +210,14 @@ public class CartController {
         }
     }
 
+    /**
+     * 删除购物车中的商品
+     * @param userId
+     * @param itemId
+     * @param request
+     * @param response
+     * @return
+     */
     @RequestMapping("deleteItemFromCart")
     public Result deleteItemFromCart(String userId,Long itemId,HttpServletRequest request,HttpServletResponse response){
         try {
@@ -194,6 +231,12 @@ public class CartController {
                 addClientCookie(cart,request,response);
             }else{
                 //已登录
+                //1、获取redis中的购物车
+                Map<String, TbItem> cart = getCartFormRedis(userId);
+                //2、根据购物车中商品的itemId删除
+                cart.remove(itemId.toString());
+                //3、将删除过后的购物车从新写到redis中
+                addCartToRedis(cart,userId);
             }
             return Result.ok();
         }catch (Exception e){

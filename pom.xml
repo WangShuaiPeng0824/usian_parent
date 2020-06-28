@@ -31,6 +31,10 @@
         <module>usian_cart_service</module>
         <module>usian_cart_feign</module>
         <module>usian_cart_web</module>
+        <module>usian_order_service</module>
+        <module>usian_order_feign</module>
+        <module>usian_order_web</module>
+        <module>common_zuul</module>
     </modules>
 
     <!--Spring Boot 父工程-->

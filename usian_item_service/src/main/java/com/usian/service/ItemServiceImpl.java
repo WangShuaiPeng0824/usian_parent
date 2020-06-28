@@ -7,6 +7,7 @@ import com.usian.pojo.*;
 import com.usian.redis.RedisClient;
 import com.usian.utils.IDUtils;
 import com.usian.utils.PageResult;
+import com.usian.utils.Result;
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,6 +62,9 @@ public class ItemServiceImpl implements ItemService{
 
     @Value("${SETNX_DESC_LOCK_KEY}")
     private String SETNX_DESC_LOCK_KEY;
+
+    @Autowired
+    private TbOrderItemMapper tbOrderItemMapper;
 
     @Override
     public TbItem selectItemInfo(Long itemId) {
@@ -226,5 +230,25 @@ public class ItemServiceImpl implements ItemService{
             selectItemDescByItemId(itemId);
         }
         return null;
+    }
+
+    @Override
+    public Integer updateTbItemByOrderId(String orderId) {
+        //1、根据orderId查询List<TbOrderItem>  tbOrderItemList
+        TbOrderItemExample tbOrderItemExample = new TbOrderItemExample();
+        TbOrderItemExample.Criteria criteria = tbOrderItemExample.createCriteria();
+        criteria.andOrderIdEqualTo(orderId);
+        List<TbOrderItem> tbOrderItemList = tbOrderItemMapper.selectByExample(tbOrderItemExample);
+
+        //2、遍历tbOrderItemList,根据itemId修改库存
+        int result = 0;
+        for (int i = 0; i < tbOrderItemList.size(); i++) {
+            TbOrderItem tbOrderItem = tbOrderItemList.get(i);
+            TbItem tbItem = tbItemMapper.selectByPrimaryKey(Long.valueOf(tbOrderItem.getItemId()));
+            tbItem.setNum(tbItem.getNum()-tbOrderItem.getNum());
+            result = tbItemMapper.updateByPrimaryKeySelective(tbItem);
+        }
+
+        return result;
     }
 }
